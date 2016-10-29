@@ -1,63 +1,27 @@
-console.clear()
+import Display from './display'
+import Vector from './vector'
+import Rect from './rect'
+import Mouse from './mouse'
 
-var appUnit, appRect, app = document.querySelector('#app')
-var cvs = document.querySelector('canvas')
-var ctx = cvs.getContext('2d')
+var app = document.querySelector('#app')
 
-function resize() {
-  appRect = app.getBoundingClientRect()
-  if (cvs.width !== appRect.width || cvs.height !== appRect.height) {
-    cvs.width = appRect.width
-    cvs.height = appRect.height
-  }
-  update()
-}
+Display.init(app)
+background = Display.create('background')
+foreground = Display.create('foreground')
 
-function update() {
-  appUnit = (cvs.width / 32)
-  var size = appUnit + 'px'
+background.rect(Display.size / 2, 'black')([0, 0])
+background.rect(Display.size / 2, 'gray')(Display.size / 2)
 
-  // Background
-  ctx.fillStyle = '#223'
-  ctx.fillRect(0, 0, cvs.width, cvs.height)
+foreground.text('Hello World!', 'center', 'white')(Display.size * (3 / 4))
 
-  // Text alignment
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-
-  ctx.fillStyle = 'white'
-  ctx.font = appUnit * 1.5 + 'px sans-serif'
-  ctx.fillText('This text resizes with the viewport.', cvs.width / 2, appUnit * 8)
-
-  ctx.fillStyle = 'rgba(255, 255, 255, .5)'
-  ctx.font = appUnit + 'px sans-serif'
-  ctx.fillText('It\'s also drawn using the Canvas API.', cvs.width / 2, appUnit * (8 + 2.5))
-  ctx.fillText('Try scaling down the window!', cvs.width / 2, appUnit * (8 + 4))
-}
-
-window.addEventListener('resize', resize)
-window.addEventListener('load', function() {
-  resize()
-  app.addEventListener('mousemove', function(e) {
-    var x = (e.pageX - appRect.left) / appUnit
-    var y = (e.pageY - appRect.top)  / appUnit
-    var xCenter = x * appUnit
-    var yCenter = y * appUnit
-    var xStart  = xCenter - appUnit
-    var yStart  = yCenter - appUnit
-
-    ctx.fillStyle = '#223'
-    ctx.fillRect(xStart, yStart, appUnit * 2, appUnit * 2)
-  })
-})
-
-player = {
-  posDrawn: null,
-  pos: [16, 16],
-  size: 8,
-  draw: function() {
-    if (this.posDrawn) {
-
-    }
-  }
-}
+// app.addEventListener('mousemove', function(e) {
+//   var x = (e.pageX - appRect.left) / appUnit
+//   var y = (e.pageY - appRect.top)  / appUnit
+//   var xCenter = x * appUnit
+//   var yCenter = y * appUnit
+//   var xStart  = xCenter - appUnit
+//   var yStart  = yCenter - appUnit
+//
+//   ctx.fillStyle = '#223'
+//   ctx.fillRect(xStart, yStart, appUnit * 2, appUnit * 2)
+// })
