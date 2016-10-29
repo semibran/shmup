@@ -1,0 +1,31 @@
+{
+  "name": "shmup",
+  "version": "1.0.0",
+  "description": "Generic shoot 'em up.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/grandonbroseph/shmup.git"
+  },
+  "scripts": {
+    "postinstall": "npm start",
+    "start": "npm-run-all --parallel serve watch",
+    "serve": "browser-sync start --no-notify --no-ui --server --files \"docs/*.+(html|css|js), docs/images/*.svg\" --port 8080 --startPath docs",
+    "watch": "npm-run-all --parallel watch:*",
+    "watch:html": "pug -Pw docs/pages/index.pug -o docs",
+    "watch:css": "onchange \"docs/styles/*.css\" -i -- copyfiles -f docs/styles/*.css docs && postcss -u autoprefixer -r docs/*.css",
+    "watch:js": "rollup -w -i docs/scripts/main.js -o docs/main.js"
+  },
+  "author": "Brandon Semilla (grandonbroseph+gh@gmail.com)",
+  "license": "MIT",
+  "devDependencies": {
+    "autoprefixer": "^6.5.1",
+    "browser-sync": "^2.17.5",
+    "npm-run-all": "^3.1.1",
+    "copyfiles": "^1.0.0",
+    "onchange": "^3.0.2",
+    "postcss-cli": "^2.6.0",
+    "pug-cli": "^1.0.0-alpha6",
+    "rollup": "^0.36.3",
+    "rollup-watch": "^2.5.0"
+  }
+}
