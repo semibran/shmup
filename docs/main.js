@@ -10,51 +10,57 @@ var Display = (function() {
       update(canvas);
     }
   }
-  function update(canvas, force) {
+  function update(canvas) {
     var rect = canvas.parent.getBoundingClientRect();
-    if (force || canvas.element.width !== rect.width || canvas.element.height !== rect.height) {
+    if (canvas.element.width !== rect.width || canvas.element.height !== rect.height) {
       canvas.element.width = rect.width;
       canvas.element.height = rect.height;
       canvas.rect = rect;
-      draw(canvas);
     }
+    draw(canvas);
   }
   function draw(canvas) {
     var unit = canvas.rect.width / size;
     var ctx  = canvas.context;
     var i    = canvas.children.length;
     var child;
+    var x, y, w, h;
 
     while (i--) {
       child = canvas.children[i];
       ctx.fillStyle = child.color || 'black';
+      if (child.drawn) {
+        x = child.drawn.pos [0];
+        y = child.drawn.pos [1];
+        w = child.drawn.size[0];
+        h = child.drawn.size[1];
+        ctx.clearRect(x - w / 2 - 1, y - h / 2 - 1, w + 2, h + 2);
+      }
+      x = y = w = h = null;
+      x = child.pos [0] * unit;
+      y = child.pos [1] * unit;
+      if (child.size) {
+        w = child.size[0] * unit;
+        h = child.size[1] * unit;
+      }
       if (child.type === 'rect') {
-        var x = child.pos [0] * unit;
-        var y = child.pos [1] * unit;
-        var w = child.size[0] * unit;
-        var h = child.size[1] * unit;
         ctx.fillRect(x, y, w, h);
       } else if (child.type === 'text') {
-        var x = child.pos[0] * unit;
-        var y = child.pos[1] * unit;
         ctx.font = unit * 2 + 'px Roboto, sans-serif';
-        if (child.align === 'center') {
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-        } else { // if (child.align === 'left') {
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'top';
-        }
-        ctx.fillText(child.content, x, y);
+        w = ctx.measureText(child.content).width;
+        h = unit * 2;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(child.content, x - w / 2, y - h / 2, w, h);
       } else if (child.type === 'sprite') {
-        var x = child.pos [0] * unit;
-        var y = child.pos [1] * unit;
-        var w = child.size[0] * unit;
-        var h = child.size[1] * unit;
         var sprite = child;
         var image = sprites[child.id];
-        ctx.drawImage(image, x - w / 2, y - w / 2, w, h);
+        ctx.drawImage(image, x - w / 2, y - h / 2, w, h);
       }
+      child.drawn = {
+        pos: [x, y],
+        size: [w, h]
+      };
     }
   }
   function getMethods() {
@@ -275,6 +281,88 @@ var Vector = {
   }
 };
 
+var Input = (function() {
+  var pressed  = {};
+  var tapped   = {};
+  var time     = {};
+  var released = {};
+
+  var element = document.body;
+  var mousePos = null;
+
+  var init = false;
+  var looping = false;
+
+  function handleInput(e) {
+    var type, down, code;
+    if (e.type === 'keydown' || e.type === 'keyup') {
+      type = 'key';
+      code = e.code;
+      down = e.type === 'keydown';
+    } else if (e.type === 'mousedown' || e.type === 'mouseup') {
+      type = 'key';
+      code = e.button === 0 ? 'MouseLeft' : e.button === 2 ? 'MouseRight' : null;
+      down = e.type === 'mousedown';
+    } else if (e.type === 'touchstart' || e.type === 'touchend') {
+      type = 'key';
+      code = 'MouseLeft';
+      down = e.type === 'touchstart';
+    }
+    if (down) {
+      if (!pressed[code]) {
+        time[code] = 0;
+        tapped[code] = true;
+      }
+    } else {
+      if (pressed[code]) {
+        time[code] = 0;
+        released[code] = true;
+      }
+    }
+    pressed[code] = down;
+  }
+
+  return {
+    mousePos: mousePos,
+    pressed: pressed,
+    tapped: tapped,
+    time: time,
+    released: released,
+    init: function(parent) {
+      var that = this;
+      element = parent || element;
+      init = true;
+      element.addEventListener(event, handleInput);
+      window.addEventListener('keydown', handleInput);
+      window.addEventListener('keyup', handleInput);
+      element.addEventListener('mousemove', function(e) {
+        var rect = element.getBoundingClientRect();
+        that.mousePos = that.mousePos || [0, 0];
+        that.mousePos[0] = (e.pageX - rect.left) / rect.width;
+        that.mousePos[1] = (e.pageY - rect.top)  / rect.height;
+      });
+      ['mousedown', 'mouseup', 'touchstart', 'touchend'].some(function(event) {
+        element.addEventListener(event, handleInput);
+      });
+    },
+    loop: function(callback) {
+      if ( looping) throw 'InputError: `loop` function is already in progress.'
+      if (!init) this.init();
+      looping = true;
+      function loop() {
+        callback.call(window);
+        requestAnimationFrame(function() {
+          loop(callback);
+        });
+        for (code in pressed)  if (pressed[code]) time[code]++;
+        for (code in tapped)   tapped[code]   = false;
+        for (code in released) released[code] = false;
+      }
+      loop();
+    }
+  }
+}());
+
 var app = document.querySelector('#app');
 var ship;
 
@@ -289,35 +377,38 @@ function main() {
 
   ship = foreground.sprite('ship', 3, 'crimson')(Display.size * (1 / 4));
 
-  loop();
+  Input.init(app);
+  Input.loop(function() {
+    var dx = 0, dy = 0, speed = .25;
+    var mouse, dist, normal, vel;
+    if (Input.pressed.ArrowLeft)  dx--;
+    if (Input.pressed.ArrowRight) dx++;
+    if (Input.pressed.ArrowUp)    dy--;
+    if (Input.pressed.ArrowDown)  dy++;
+    if (!dx && !dy) {
+      if (Input.mousePos) {
+        mouse  = Vector.scaled(Input.mousePos, Display.size);
+        dist   = Vector.subtracted(mouse, ship.pos);
+        dx     = dist[0];
+        dy     = dist[1];
+      }
+    } else {
+      Input.mousePos = null;
+    }
+    if (dx || dy) {
+      normal = Vector.normalized([dx, dy]);
+      vel    = Vector.scaled(normal, speed);
+      if (dist && Vector.magnitude(dist) < Vector.magnitude(vel)) {
+        vel = dist;
+      }
+      Vector.add(ship.pos, vel);
+      foreground.update();
+    }
+  });
 }
 
 Display.init(app);
 Display.load('ship', main);
-
-var keyPressed = {};
-function handleKeys(e) {
-  var keydown = e.type === 'keydown';
-  keyPressed[e.code] = keydown;
-}
-
-window.addEventListener('keydown', handleKeys);
-window.addEventListener('keyup',   handleKeys);
-
-function loop() {
-  var dx = 0, dy = 0;
-  if (keyPressed.ArrowLeft) {
-    dx--;
-  }
-  if (keyPressed.ArrowRight) {
-    dx++;
-  }
-  if (dx != 0 || dy != 0) {
-    Vector.add(ship.pos, Vector.scaled([dx, dy], .2));
-    foreground.update();
-  }
-  requestAnimationFrame(loop);
-}
 
 // app.addEventListener('mousemove', function(e) {
 //   var x = (e.pageX - appRect.left) / appUnit

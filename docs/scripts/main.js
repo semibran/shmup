@@ -1,7 +1,7 @@
 import Display from './display'
 import Vector from './vector'
 import Rect from './rect'
-import Mouse from './mouse'
+import Input from './input'
 
 var app = document.querySelector('#app')
 var ship
@@ -17,35 +17,38 @@ function main() {
 
   ship = foreground.sprite('ship', 3, 'crimson')(Display.size * (1 / 4))
 
-  loop()
+  Input.init(app)
+  Input.loop(function() {
+    var dx = 0, dy = 0, speed = .25
+    var mouse, dist, normal, vel
+    if (Input.pressed.ArrowLeft)  dx--
+    if (Input.pressed.ArrowRight) dx++
+    if (Input.pressed.ArrowUp)    dy--
+    if (Input.pressed.ArrowDown)  dy++
+    if (!dx && !dy) {
+      if (Input.mousePos) {
+        mouse  = Vector.scaled(Input.mousePos, Display.size)
+        dist   = Vector.subtracted(mouse, ship.pos)
+        dx     = dist[0]
+        dy     = dist[1]
+      }
+    } else {
+      Input.mousePos = null
+    }
+    if (dx || dy) {
+      normal = Vector.normalized([dx, dy])
+      vel    = Vector.scaled(normal, speed)
+      if (dist && Vector.magnitude(dist) < Vector.magnitude(vel)) {
+        vel = dist
+      }
+      Vector.add(ship.pos, vel)
+      foreground.update()
+    }
+  })
 }
 
 Display.init(app)
 Display.load('ship', main)
-
-var keyPressed = {}
-function handleKeys(e) {
-  var keydown = e.type === 'keydown'
-  keyPressed[e.code] = keydown
-}
-
-window.addEventListener('keydown', handleKeys)
-window.addEventListener('keyup',   handleKeys)
-
-function loop() {
-  var dx = 0, dy = 0
-  if (keyPressed.ArrowLeft) {
-    dx--
-  }
-  if (keyPressed.ArrowRight) {
-    dx++
-  }
-  if (dx != 0 || dy != 0) {
-    Vector.add(ship.pos, Vector.scaled([dx, dy], .2))
-    foreground.update()
-  }
-  requestAnimationFrame(loop)
-}
 
 // app.addEventListener('mousemove', function(e) {
 //   var x = (e.pageX - appRect.left) / appUnit

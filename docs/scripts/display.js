@@ -10,50 +10,56 @@ export default (function() {
       update(canvas)
     }
   }
-  function update(canvas, force) {
+  function update(canvas) {
     var rect = canvas.parent.getBoundingClientRect()
-    if (force || canvas.element.width !== rect.width || canvas.element.height !== rect.height) {
+    if (canvas.element.width !== rect.width || canvas.element.height !== rect.height) {
       canvas.element.width = rect.width
       canvas.element.height = rect.height
       canvas.rect = rect
-      draw(canvas)
     }
+    draw(canvas)
   }
   function draw(canvas) {
     var unit = canvas.rect.width / size
     var ctx  = canvas.context
     var i    = canvas.children.length
     var child
+    var x, y, w, h
 
     while (i--) {
       child = canvas.children[i]
       ctx.fillStyle = child.color || 'black'
+      if (child.drawn) {
+        x = child.drawn.pos [0]
+        y = child.drawn.pos [1]
+        w = child.drawn.size[0]
+        h = child.drawn.size[1]
+        ctx.clearRect(x - w / 2 - 1, y - h / 2 - 1, w + 2, h + 2)
+      }
+      x = y = w = h = null
+      x = child.pos [0] * unit
+      y = child.pos [1] * unit
+      if (child.size) {
+        w = child.size[0] * unit
+        h = child.size[1] * unit
+      }
       if (child.type === 'rect') {
-        var x = child.pos [0] * unit
-        var y = child.pos [1] * unit
-        var w = child.size[0] * unit
-        var h = child.size[1] * unit
         ctx.fillRect(x, y, w, h)
       } else if (child.type === 'text') {
-        var x = child.pos[0] * unit
-        var y = child.pos[1] * unit
         ctx.font = unit * 2 + 'px Roboto, sans-serif'
-        if (child.align === 'center') {
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-        } else { // if (child.align === 'left') {
-          ctx.textAlign = 'left'
-          ctx.textBaseline = 'top'
-        }
-        ctx.fillText(child.content, x, y)
+        w = ctx.measureText(child.content).width
+        h = unit * 2
+        ctx.textAlign = 'left'
+        ctx.textBaseline = 'top'
+        ctx.fillText(child.content, x - w / 2, y - h / 2, w, h)
       } else if (child.type === 'sprite') {
-        var x = child.pos [0] * unit
-        var y = child.pos [1] * unit
-        var w = child.size[0] * unit
-        var h = child.size[1] * unit
         var sprite = child
         var image = sprites[child.id]
-        ctx.drawImage(image, x - w / 2, y - w / 2, w, h)
+        ctx.drawImage(image, x - w / 2, y - h / 2, w, h)
+      }
+      child.drawn = {
+        pos: [x, y],
+        size: [w, h]
       }
     }
   }
