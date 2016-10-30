@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-  <path fill="crimson" d="M11 0 h2 l2 10 l4 8 l-4 -2 h-1 l-2 1 l-2 -1 h-1 l-4 2 l4 -8z"/>
-  <path fill="black" d="M12 6 l3 8 l-3 1 l-3 -1z"/>
-  <path fill="white" d="M12 8 l2 5 l-2 -1z"/>
-  <path fill="cyan" d="M10 16 l2 1 l2 -1 l-2 6z"/>
-  <path fill="gray" d="M8 7 v5 l-2 4 l1 -8z"/>
-  <path fill="gray" d="M16 7 l1 1 l1 8 l-2 -4z"/>
+  <path fill="crimson" d="M12 0 l1 1 l1 9 l4 8 l-4 -2 l-2 1 l-2 -1 l-4 2 l4 -8 l1 -9z"/>
+  <path fill="black" d="M12 7 l2 7 l-2 1 l-2 -1z"/>
+  <path fill="white" d="M12 9 l1 4 l-1 -1z"/>
+  <path fill="gray"  d="M15 5 l1 1 l1 10 l-2 -4z"/>
+  <path fill="gray"  d="M9 5 l-1 1 l-1 10 l2 -4z"/>
+  <path fill="cyan"  d="M10 16 l2 1 l2 -1 l-2 8z"/>
 </svg>
