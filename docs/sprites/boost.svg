@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8" shape-rendering="crispEdges">
+  <style>
+    @keyframes flicker {
+      from {
+        transform: scale(0.95);
+      }
+      50% {
+        transform: scale(1);
+      }
+      to {
+        transform: scale(0.95);
+      }
+    }
+    #blue, #white {
+      transform-origin: right center;
+      animation: flicker .1s infinite;
+    }
+  </style>
+  <circle  id="blue"  fill="dodgerblue" cx="4" cy="4" r="4"/>
+  <ellipse id="white" fill="white" cx="5" cy="4" rx="3" ry="2"/>
+</svg>

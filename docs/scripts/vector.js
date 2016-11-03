@@ -67,12 +67,14 @@ export default {
   },
   normalize: function(vector) {
     var magnitude = this.magnitude(vector)
+    if (!magnitude) return [0, 0]
     vector[0] /= magnitude
     vector[1] /= magnitude
     return vector
   },
   normalized: function(vector) {
     var magnitude = this.magnitude(vector)
+    if (!magnitude) return [0, 0]
     return this.scaled(vector, 1 / magnitude)
   },
   clone: function(vector) {

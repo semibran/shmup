@@ -1,2 +1,2 @@
 # shmup
-Generic shoot 'em up.
+> Generic shoot 'em up.

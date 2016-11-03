@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8" shape-rendering="crispEdges">
+  <style>
+    @keyframes stroke-width {
+      from {
+        stroke-width: 4;
+        r: 0;
+      }
+      to {
+        stroke-width: 0;
+        r: 4;
+      }
+    }
+    @keyframes flicker {
+      from {
+        opacity: 1;
+      }
+      50% {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
+    }
+    #explosion {
+      animation: stroke-width 0.25s ease-out infinite, flicker 0.1s linear infinite;
+    }
+  </style>
+  <circle id="explosion" fill="transparent" stroke="orange" cx="4" cy="4" r="0"/>
+</svg>

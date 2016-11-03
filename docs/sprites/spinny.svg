@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" shape-rendering="crispEdges">
+  <style>
+    @keyframes rotate {
+      from {
+        transform: rotate(360deg);
+      }
+      to {
+        transform: rotate(0);
+      }
+    }
+    #spinny {
+      transform-origin: center;
+      animation: rotate 0.25s linear infinite;
+    }
+  </style>
+  <g id="spinny">
+    <ellipse fill="orange" cx="12" cy="12" rx="9" ry="12"/>
+    <ellipse fill="white"  cx="12" cy="12" rx="8" ry="8"/>
+  </g>
+</svg>

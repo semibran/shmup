@@ -1,8 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-  <path fill="crimson" d="M12 0 l1 1 l1 9 l4 8 l-4 -2 l-2 1 l-2 -1 l-4 2 l4 -8 l1 -9z"/>
-  <path fill="black" d="M12 7 l2 7 l-2 1 l-2 -1z"/>
-  <path fill="white" d="M12 9 l1 4 l-1 -1z"/>
-  <path fill="gray"  d="M15 5 l1 1 l1 10 l-2 -4z"/>
-  <path fill="gray"  d="M9 5 l-1 1 l-1 10 l2 -4z"/>
-  <path fill="cyan"  d="M10 16 l2 1 l2 -1 l-2 8z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 12" shape-rendering="crispEdges">
+  <g fill="crimson">
+    <polygon points="1,1 3,3 6,4 9,3"/>
+    <polygon points="4,4 5,5 8,5 11,4 12,4 13,6 16,7 22,8 23,9 21,9 16,8 13,7 12,8 10,8 12,6 7,6 5,8 5,7 4,6"/>
+    <polygon points="6,7 10,7 8,9 8,10 7,10 6,9"/>
+  </g>
+  <g fill="#603">
+    <polygon points="3,3 6,4 9,3 11,4 8,5 5,5"/>
+    <polygon points="6,7 7,6 12,6 10,8 9,8 10,7"/>
+    <polygon points="12,8 13,8 15,9 21,9 16,8 13,7"/>
+    <polygon points="5,8 6,7 6,9 7,10 8,10 8,11 6,11 5,10"/>
+  </g>
+  <g fill="#333">
+    <polygon points="2,5 4,5 4,6 5,7 4,7"/>
+    <polygon points="8,9 9,8 11,8 10,9 8,9"/>
+    <polygon points="12,4 17,5 22,8 15,6z"/>
+  </g>
+  <g fill="black">
+    <polygon points="3,6 4,7 5,7 5,8 4,8 3,7"/>
+    <polygon points="12,4 15,6 22,8 16,7 13,6"/>
+    <polygon points="8,9 10,9 9,10 8,10"/>
+    <polygon points="11,8 12,8 11,9 10,9"/>
+  </g>
+  <polygon fill="white" points="15,5 18,6 17,6"/>
 </svg>

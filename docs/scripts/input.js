@@ -32,7 +32,7 @@ export default (function() {
       }
     } else {
       if (pressed[code]) {
-        time[code] = 0
+        time[code] = null
         released[code] = true
       }
     }
@@ -49,15 +49,30 @@ export default (function() {
       var that = this
       element = parent || element
       init = true
-      element.addEventListener(event, handleInput)
-      window.addEventListener('keydown', handleInput)
-      window.addEventListener('keyup', handleInput)
-      element.addEventListener('mousemove', function(e) {
+
+      function mouseDown(e) {
         var rect = element.getBoundingClientRect()
         that.mousePos = that.mousePos || [0, 0]
         that.mousePos[0] = (e.pageX - rect.left) / rect.width
         that.mousePos[1] = (e.pageY - rect.top)  / rect.height
-      });
+        e.preventDefault()
+      }
+
+      function mouseUp() {
+        that.mousePos = null
+      }
+
+      element.addEventListener(event,        handleInput)
+      window.addEventListener('keydown',     handleInput)
+      window.addEventListener('keyup',       handleInput)
+      window.addEventListener('mousemove',  mouseDown);
+      element.addEventListener('mousedown',  mouseDown);
+      window.addEventListener('mouseup',    mouseUp);
+
+      window.addEventListener('touchmove',  mouseDown);
+      element.addEventListener('touchstart', mouseDown);
+      window.addEventListener('touchend',   mouseUp);
+
       ['mousedown', 'mouseup', 'touchstart', 'touchend'].some(function(event) {
         element.addEventListener(event, handleInput)
       })
@@ -71,6 +86,9 @@ export default (function() {
         requestAnimationFrame(function() {
           loop(callback)
         })
+        // setTimeout(function() {
+        //   loop(callback)
+        // }, 1000)
         for (code in pressed)  if (pressed[code]) time[code]++
         for (code in tapped)   tapped[code]   = false
         for (code in released) released[code] = false

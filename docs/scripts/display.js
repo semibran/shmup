@@ -1,7 +1,8 @@
 export default (function() {
   var canvases = []
   var sprites = {}
-  var size = 32
+  var scale = 32
+  var size = [scale, scale * 3 / 4]
   var element
   function onresize() {
     var i = canvases.length, canvas
@@ -17,55 +18,128 @@ export default (function() {
       canvas.element.height = rect.height
       canvas.rect = rect
     }
-    draw(canvas)
+    drawCanvas(canvas)
   }
-  function draw(canvas) {
-    var unit = canvas.rect.width / size
-    var ctx  = canvas.context
-    var i    = canvas.children.length
-    var child
-    var x, y, w, h
+  function drawChild(child) {
+    var parent  = child.parent
+    var ctx     = parent.context
+    var child, color, gradient
+    var x, y, w, h, box = child.drawBox
 
-    while (i--) {
-      child = canvas.children[i]
-      ctx.fillStyle = child.color || 'black'
-      if (child.drawn) {
-        x = child.drawn.pos [0]
-        y = child.drawn.pos [1]
-        w = child.drawn.size[0]
-        h = child.drawn.size[1]
-        ctx.clearRect(x - w / 2 - 1, y - h / 2 - 1, w + 2, h + 2)
+    x = box.pos [0]
+    y = box.pos [1]
+    w = box.size[0]
+    h = box.size[1]
+
+    color = child.color
+    if (typeof color === 'object' && color !== null) {
+      if (typeof w !== 'undefined' && typeof h !== 'undefined') {
+        gradient = ctx.createLinearGradient(0, 0, 0, h)
+        color.some(function(color, index) {
+          gradient.addColorStop(index, color)
+        })
+        color = gradient
       }
-      x = y = w = h = null
+    }
+
+    ctx.fillStyle = color
+
+    var cx = x// + w / 2
+    var cy = y// + h / 2
+
+    if (child.type === 'rect') {
+      ctx.fillRect(x, y, w, h)
+    } else if (child.type === 'circle') {
+      ctx.arc(cx, cy, w, 0, 2 * Math.PI)
+      ctx.fill()
+    } else if (child.type === 'text') {
+      ctx.font = unit * 2 + 'px Roboto, sans-serif'
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'top'
+      ctx.fillText(child.content, cx, cy, w, h)
+    } else if (child.type === 'sprite') {
+      var sprite = child
+      var image = sprites[child.id][color || 'colored']
+      ctx.drawImage(image, cx, cy, w, h)
+    }
+    child.drawnBox = {
+      pos:  [x, y],
+      size: [w, h],
+      color: child.color
+    }
+  }
+  function eraseChild(child) {
+    var box = child.drawnBox
+    if (box) {
+      x = box.pos [0]
+      y = box.pos [1]
+      w = box.size[0]
+      h = box.size[1]
+      child.parent.context.clearRect(x, y, w, h)
+    }
+  }
+  function drawCanvas(canvas) {
+    var unit    = canvas.rect.width / scale
+    var i, imax = canvas.children.length
+    var dirty = []
+    var x, y, w, h, box
+
+    i = 0
+    while (i < imax) {
+      child = canvas.children[i]
+
+      box = x = y = w = h = null
+
       x = child.pos [0] * unit
       y = child.pos [1] * unit
       if (child.size) {
         w = child.size[0] * unit
         h = child.size[1] * unit
-      }
-      if (child.type === 'rect') {
-        ctx.fillRect(x, y, w, h)
       } else if (child.type === 'text') {
-        ctx.font = unit * 2 + 'px Roboto, sans-serif'
         w = ctx.measureText(child.content).width
         h = unit * 2
-        ctx.textAlign = 'left'
-        ctx.textBaseline = 'top'
-        ctx.fillText(child.content, x - w / 2, y - h / 2, w, h)
-      } else if (child.type === 'sprite') {
-        var sprite = child
-        var image = sprites[child.id]
-        ctx.drawImage(image, x - w / 2, y - h / 2, w, h)
       }
-      child.drawn = {
-        pos: [x, y],
-        size: [w, h]
+
+      if (child.type === 'text' || child.type === 'sprite') {
+        x -= w / 2
+        y -= h / 2
       }
+
+      box = child.drawBox = {
+        pos:   [x, y],
+        size:  [w, h],
+        color: child.color
+      }
+
+      // if (!child.drawnBox) {
+      //   child.drawnBox = {
+      //     pos:  [x, y],
+      //     size: [w, h]
+      //   }
+      // }
+
+      if (!child.drawnBox ||
+          Math.round(box.pos[0]) !== Math.round(child.drawnBox.pos[0]) || Math.round(box.pos[1]) !== Math.round(child.drawnBox.pos[1]) ||
+          box.color !== child.drawnBox.color
+        ) {
+        eraseChild(child)
+        dirty.push(child)
+      }
+      i++
+    }
+
+    imax = dirty.length
+    i = 0
+    while (i < imax) {
+      child = dirty[i]
+      drawChild(child)
+      i++
     }
   }
   function getMethods() {
     var canvas = this
     return {
+      parent: canvas,
       update: function() {
         update(canvas, true)
       },
@@ -78,10 +152,31 @@ export default (function() {
             pos = [pos, pos]
           }
           var data = {
-            type:  'rect',
-            size:  size,
-            color: color || 'black',
-            pos:   pos   || [0, 0]
+            type:   'rect',
+            size:   size,
+            color:  color,
+            pos:    pos   || [0, 0],
+            parent: canvas
+          }
+          canvas.children.push(data)
+          update(canvas, true)
+          return data
+        }
+      },
+      circle: function(size, color) {
+        if (typeof size === 'number') {
+          size = [size, size]
+        }
+        return function drawCircle(pos) {
+          if (typeof pos === 'number') {
+            pos = [pos, pos]
+          }
+          var data = {
+            type:   'circle',
+            size:   size,
+            color:  color,
+            pos:    pos   || [0, 0],
+            parent: canvas
           }
           canvas.children.push(data)
           update(canvas, true)
@@ -97,8 +192,9 @@ export default (function() {
             type:    'text',
             content: content,
             align:   align || 'left',
-            color:   color || 'black',
-            pos:     pos   || [0, 0]
+            color:   color,
+            pos:     pos   || [0, 0],
+            parent:  canvas
           }
           canvas.children.push(data)
           update(canvas, true)
@@ -106,6 +202,9 @@ export default (function() {
         }
       },
       sprite: function(id, size, color) {
+        if (typeof id === 'undefined' || !sprites[id]) {
+          throw 'DisplayError: Sprite of id `' + id + '` was not loaded.'
+        }
         if (typeof size === 'number') {
           size = [size, size]
         }
@@ -114,21 +213,32 @@ export default (function() {
             pos = [pos, pos]
           }
           var data = {
-            type:    'sprite',
-            id:      id,
-            size:    size,
-            color:   color || 'black',
-            pos:     pos   || [0, 0]
+            type:   'sprite',
+            id:     id,
+            size:   size,
+            color:  color,
+            pos:    pos ? [pos[0], pos[1]] : [0, 0],
+            parent: canvas
           }
           canvas.children.push(data)
           update(canvas, true)
           return data
         }
+      },
+      delete: function(child) {
+        var index = canvas.children.indexOf(child)
+        if (index !== -1)
+          canvas.children.splice(index, 1)
+        else
+          console.log('Child was not found.')
+        eraseChild(child)
+        return index
       }
     }
   }
   return {
     size: size,
+    scale: scale,
     init: function(parent) {
       init = true
       element = parent || document.body
@@ -145,18 +255,37 @@ export default (function() {
         ajax.open("GET", "sprites/" + sprite + ".svg", true);
         ajax.send();
         ajax.onload = function(e) {
+          var response = ajax.responseText
+          var colors = ['white', 'black']
+          var colorIndex = 0
           var image = new Image()
-          image.src = 'data:image/svg+xml;base64,' + window.btoa(ajax.responseText);
+          image.src = 'data:image/svg+xml;base64,' + window.btoa(response)
           image.onload = function() {
-            sprites[sprite] = image
-            if (index < list.length) {
-              next()
-            } else {
-              callback && callback.call(window)
+            sprites[sprite].colored = image
+          }
+          sprites[sprite] = {}
+          function colorNext() {
+            var color = colors[colorIndex]
+            var replaced = response.replace(/fill="[#\w\d\s]+"/g, 'fill="' + color + '"')
+            var image = new Image()
+            image.src = 'data:image/svg+xml;base64,' + window.btoa(replaced)
+            image.onload = function() {
+              sprites[sprite][color] = image
+              colorIndex++
+              if (colorIndex < colors.length) {
+                colorNext()
+              } else {
+                index++
+                if (index < list.length) {
+                  next()
+                } else {
+                  callback && callback.call(window)
+                }
+              }
             }
           }
+          colorNext()
         }
-        index++
       }
       next()
     },
