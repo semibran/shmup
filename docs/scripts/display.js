@@ -5,31 +5,75 @@ export default (function() {
   var size = [scale, scale * 3 / 4]
   var element
   function onresize() {
-    var i = canvases.length, canvas
-    while (i--) {
-      canvas = canvases[i]
-      update(canvas)
-    }
+    // requestAnimationFrame(function() {
+      var i = canvases.length, canvas
+      while (i--) {
+        canvas = canvases[i]
+        update(canvas)
+      }
+    // })
   }
   function update(canvas) {
+    var force = false
     var rect = canvas.parent.getBoundingClientRect()
-    if (canvas.element.width !== rect.width || canvas.element.height !== rect.height) {
-      canvas.element.width = rect.width
-      canvas.element.height = rect.height
+    var w = Math.round(rect.width)
+    var h = Math.round(rect.height)
+    if (canvas.element.width !== w || canvas.element.height !== h) {
+      canvas.element.width = w
+      canvas.element.height = h
       canvas.rect = rect
+      force = true
     }
-    drawCanvas(canvas)
+    if (canvas.element.id === 'foreground')
+      force = true
+    drawCanvas(canvas, force)
+  }
+  function getDrawBox(child) {
+    var unit = child.parent.rect.width / scale
+    var x, y, w, h
+
+    x = child.pos [0] * unit
+    y = child.pos [1] * unit
+    if (child.size) {
+      w = child.size[0] * unit
+      h = child.size[1] * unit
+    } else if (child.type === 'text') {
+      w = ctx.measureText(child.content).width
+      h = unit * 2
+    }
+
+    if (child.type === 'text' || child.type === 'sprite') {
+      x -= w / 2
+      y -= h / 2
+    }
+
+    if (child.type === 'circle') {
+      w *= 2
+      h *= 2
+      x -= w / 2
+      y -= h / 2
+    }
+
+    return {
+      pos:   [x, y],
+      size:  [w, h],
+      color: child.color
+    }
   }
   function drawChild(child) {
     var parent  = child.parent
+    var unit    = parent.rect.width / scale
     var ctx     = parent.context
     var child, color, gradient
-    var x, y, w, h, box = child.drawBox
+    var cx, cy, x, y, w, h, box = child.drawBox || getDrawBox(child)
 
     x = box.pos [0]
     y = box.pos [1]
     w = box.size[0]
     h = box.size[1]
+
+    cx = x // + w / 2
+    cy = y // + h / 2
 
     color = child.color
     if (typeof color === 'object' && color !== null) {
@@ -44,14 +88,14 @@ export default (function() {
 
     ctx.fillStyle = color
 
-    var cx = x// + w / 2
-    var cy = y// + h / 2
-
     if (child.type === 'rect') {
       ctx.fillRect(x, y, w, h)
     } else if (child.type === 'circle') {
-      ctx.arc(cx, cy, w, 0, 2 * Math.PI)
-      ctx.fill()
+      ctx.beginPath()
+      ctx.arc(x + w / 2, y + h / 2, (w + h) / 4, 0, 2 * Math.PI)
+      ctx.strokeStyle = ctx.fillStyle
+      ctx.stroke()
+      ctx.closePath()
     } else if (child.type === 'text') {
       ctx.font = unit * 2 + 'px Roboto, sans-serif'
       ctx.textAlign = 'left'
@@ -60,7 +104,11 @@ export default (function() {
     } else if (child.type === 'sprite') {
       var sprite = child
       var image = sprites[child.id][color || 'colored']
-      ctx.drawImage(image, cx, cy, w, h)
+      var sw = image.height * w / h
+      var sh = image.height
+      var sx = sw * child.index
+      var sy = 0
+      ctx.drawImage(image, sx, sy, sw, sh, x, y, w, h)
     }
     child.drawnBox = {
       pos:  [x, y],
@@ -70,55 +118,27 @@ export default (function() {
   }
   function eraseChild(child) {
     var box = child.drawnBox
+    var ctx
     if (box) {
-      x = box.pos [0]
-      y = box.pos [1]
-      w = box.size[0]
-      h = box.size[1]
-      child.parent.context.clearRect(x, y, w, h)
+      ctx = child.parent.context
+      x = box.pos [0] - 1
+      y = box.pos [1] - 1
+      w = box.size[0] + 2
+      h = box.size[1] + 2
+      ctx.clearRect(x, y, w, h)
     }
   }
-  function drawCanvas(canvas) {
-    var unit    = canvas.rect.width / scale
+  function drawCanvas(canvas, force) {
     var i, imax = canvas.children.length
     var dirty = []
-    var x, y, w, h, box
+    var box
 
     i = 0
     while (i < imax) {
       child = canvas.children[i]
+      box = child.drawBox = getDrawBox(child)
 
-      box = x = y = w = h = null
-
-      x = child.pos [0] * unit
-      y = child.pos [1] * unit
-      if (child.size) {
-        w = child.size[0] * unit
-        h = child.size[1] * unit
-      } else if (child.type === 'text') {
-        w = ctx.measureText(child.content).width
-        h = unit * 2
-      }
-
-      if (child.type === 'text' || child.type === 'sprite') {
-        x -= w / 2
-        y -= h / 2
-      }
-
-      box = child.drawBox = {
-        pos:   [x, y],
-        size:  [w, h],
-        color: child.color
-      }
-
-      // if (!child.drawnBox) {
-      //   child.drawnBox = {
-      //     pos:  [x, y],
-      //     size: [w, h]
-      //   }
-      // }
-
-      if (!child.drawnBox ||
+      if (force || !child.drawnBox ||
           Math.round(box.pos[0]) !== Math.round(child.drawnBox.pos[0]) || Math.round(box.pos[1]) !== Math.round(child.drawnBox.pos[1]) ||
           box.color !== child.drawnBox.color
         ) {
@@ -159,7 +179,7 @@ export default (function() {
             parent: canvas
           }
           canvas.children.push(data)
-          update(canvas, true)
+          drawChild(data)
           return data
         }
       },
@@ -179,7 +199,7 @@ export default (function() {
             parent: canvas
           }
           canvas.children.push(data)
-          update(canvas, true)
+          drawChild(data)
           return data
         }
       },
@@ -197,11 +217,11 @@ export default (function() {
             parent:  canvas
           }
           canvas.children.push(data)
-          update(canvas, true)
+          drawChild(data)
           return data
         }
       },
-      sprite: function(id, size, color) {
+      sprite: function(id, size, subSize) {
         if (typeof id === 'undefined' || !sprites[id]) {
           throw 'DisplayError: Sprite of id `' + id + '` was not loaded.'
         }
@@ -215,13 +235,14 @@ export default (function() {
           var data = {
             type:   'sprite',
             id:     id,
+            index:  0,
             size:   size,
-            color:  color,
+            color:  null,
             pos:    pos ? [pos[0], pos[1]] : [0, 0],
             parent: canvas
           }
           canvas.children.push(data)
-          update(canvas, true)
+          drawChild(data)
           return data
         }
       },
@@ -242,6 +263,7 @@ export default (function() {
     init: function(parent) {
       init = true
       element = parent || document.body
+      window.addEventListener('load', onresize)
       window.addEventListener('resize', onresize)
     },
     load: function(list, callback) {

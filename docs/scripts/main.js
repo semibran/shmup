@@ -30,6 +30,17 @@ function Sprite() {
 
 }
 
+var shakeSequence = [
+  Vector.UP,
+  Vector.DOWN_RIGHT,
+  Vector.LEFT,
+  Vector.UP_RIGHT,
+  Vector.DOWN,
+  Vector.UP_LEFT,
+  Vector.RIGHT,
+  Vector.DOWN_LEFT
+]
+
 Sprite.prototype = {
   size: [1, 1],
   pos: null,
@@ -39,23 +50,34 @@ Sprite.prototype = {
   vel: null,
   offset: [0, 0],
   attached: null,
+  frames: 1,
+  frameDelay: 1,
   getHitbox: function() {
-    var min = Math.min(this.size[0], this.size[1])
-    this.hitboxSize = [min, min]
     return [this.pos, this.hitboxSize]
   },
   spawn: function(pos) {
+    var min = Math.min(this.size[0], this.size[1])
     if (!pos) throw 'SpriteError: Position specified for spawn is undefined'
     if (typeof pos === 'number') {
       pos = [pos, pos]
     }
     this.pos = Vector.clone(pos)
     this.vel = [0, 0]
-    this.obj = foreground.sprite(this.sprite, this.size)(this.pos)
+    this.obj = foreground.sprite(this.sprite, this.size, this.sizeSub || this.size)(this.pos)
     this.obj.pos = this.pos
     this.attached = false
-    this.flashing = true
+    this.flashing = false
+
+    this.shaking = false
+    this.shakeIndex = 0
+    this.shakeTimer = 0
+    this.shakeTimerMax = 15
+    this.shakeOffset = [0, 0]
+
+    this.hitboxSize = [min, min]
     this.hitbox = this.getHitbox()
+
+    this.frameTimer = 0
     sprites.push(this)
     return this
   },
@@ -69,6 +91,14 @@ Sprite.prototype = {
   flash: function() {
     this.flashing = Date.now()
     this.obj.color = 'white'
+  },
+  shake: function() {
+    this.shakeOffset = [0, 0] // Vector.clone(this.offset)
+    this.shaking = true
+    this.shakeTimer += 8
+    if (this.shakeTimer > this.shakeTimerMax) {
+      this.shakeTimer = this.shakeTimerMax
+    }
   },
   attach: function(target, offset) {
     this.attached = true
@@ -88,8 +118,27 @@ Sprite.prototype = {
     }
     Vector.add(this.pos, this.vel)
     Vector.scale(this.vel, this.frc)
+    if (this.shaking) {
+      if (this.shakeTimer--) {
+        if (++this.shakeIndex >= shakeSequence.length) {
+          this.shakeIndex -= shakeSequence.length
+        }
+        var offset = Vector.scaled(shakeSequence[this.shakeIndex], 0.05)
+        this.offset = Vector.added(this.shakeOffset, offset)
+      } else {
+        this.offset = Vector.clone(this.shakeOffset)
+        this.shakeOffset = null
+        this.shaking = false
+      }
+    }
     this.obj.pos = Vector.added(this.pos, this.offset)
     this.hitbox = this.getHitbox()
+    if (++this.frameTimer >= this.frameDelay) {
+      this.frameTimer = 0
+      if (++this.obj.index >= this.frames) {
+        this.obj.index = 0
+      }
+    }
   }
 }
 
@@ -103,12 +152,13 @@ Effect.prototype = extend(Sprite, {
   spd: 0.01,
   dir: Vector.UP,
   spawn: function(pos) {
-    this.life = this.duration * 60
+    this.life = this.duration
     return Sprite.prototype.spawn.call(this, pos)
   },
   update: function() {
     if (this.life !== Infinity) {
-      if (this.life-- <= 0) {
+      this.life--
+      if (this.life <= 0) {
         this.kill()
       }
     }
@@ -126,14 +176,16 @@ Boost.prototype = extend(Effect, {
   duration: Infinity
 })
 
-function Explosion() {
-
+function Explosion(size) {
+  this.size = size || Vector.clone(this.size)
 }
 
 Explosion.prototype = extend(Effect, {
   sprite: 'explosion',
   size: [1, 1],
-  duration: .25,
+  duration: 8,
+  frames: 4,
+  frameDelay: 2
 })
 
 function Spark() {
@@ -143,7 +195,7 @@ function Spark() {
 Spark.prototype = extend(Effect, {
   sprite: 'spark',
   size: [0.5, 0.5],
-  duration: 0.01
+  duration: 1,
 })
 
 
@@ -207,8 +259,9 @@ function Spear(targets) {
 
 Spear.prototype = extend(Projectile, {
   spd: .7,
-  size: [1, .5],
+  size: [1.5, .5],
   dir: Vector.RIGHT,
+  frames: 1,
   sprite: 'spear'
 })
 
@@ -218,10 +271,12 @@ function Spinny(targets, direction) {
 }
 
 Spinny.prototype = extend(Projectile, {
-  spd: 0.1,
-  frc: 0.66,
+  spd: 0.25,
+  frc: 0.1,
   size: [.5, .5],
-  sprite: 'spinny'
+  sprite: 'spinny',
+  frames: 6,
+  frameDelay: 2
 })
 
 
@@ -236,6 +291,7 @@ Ship.prototype = extend(Sprite, {
   shotTimer:     0,
   shotSpacing:   0,
   shotCooldown:  0,
+  shotDirection: 0,
   shotsPerBurst: 0,
   shotsPerRound: 0,
   shotsFired:    0,
@@ -244,9 +300,13 @@ Ship.prototype = extend(Sprite, {
   shoot: function() {
 
   },
+  reload: function() {
+
+  },
   hit: function(damage) {
     this.health -= damage / this.defense
     this.flash()
+    this.shake()
   },
   update: function() {
     if (this.shooting) {
@@ -268,6 +328,7 @@ Ship.prototype = extend(Sprite, {
       if (this.shotTimer >= this.shotCooldown * 60) {
         this.shotTimer = 0
         this.overheating = false
+        this.reload()
       }
     }
     if (this.health <= 0) {
@@ -293,37 +354,41 @@ function Enemy() {
 Enemy.prototype = extend(Ship, {
   health: 1,
   defense: Infinity,
-  shotCooldown:  1,
-  shotSpacing:   .1,
-  shotsPerBurst: 5,
-  shotsPerRound: 25,
-  spd: 0.001,
-  frc: 0.9999,
+  shotCooldown:  2,
+  shotSpacing:   .25,
+  shotsPerBurst: 9,
+  shotsPerRound: 9,
+  spd: 0.0025,
+  frc: 0.9975,
   dir: Vector.UP,
   size: [2, 2],
   sprite: 'enemy',
   spawn: function(pos) {
+    var hitbox, ship = Ship.prototype.spawn.call(this, pos)
     enemies.push(this)
-    return Ship.prototype.spawn.call(this, pos)
+    // hitbox = foreground.circle(Vector.scaled(this.hitboxSize, 0.5), 'lime')(this.pos)
+    return ship
   },
   kill: function() {
     Ship.prototype.kill.call(this)
     remove(enemies, this)
   },
   shoot: function() {
-    var distance = Vector.subtracted(player.pos, this.pos)
-    var normal   = Vector.normalized(distance)
-    var centerAngle = Vector.toDegrees(normal)
-    var origin   = Vector.added(this.pos, Vector.scale(normal, this.size[0] / 2))
+    var centerAngle = Vector.toDegrees(this.shotDirection)
+    var origin   = Vector.added(this.pos, Vector.scale(this.shotDirection, this.size[0] / 2))
     var imax = this.shotsPerBurst - this.shotsFired % 2
     var i = imax
-    var burstSpacing = 45 * 0.5
+    var burstSpacing = 45 * 0.25
     while (i--) {
       angle = centerAngle - imax / 2 * burstSpacing + (i + 0.5) * burstSpacing
       normal = Vector.fromDegrees(angle)
       origin = Vector.added(this.pos, Vector.scale(normal, this.size[0] / 2 + Spinny.prototype.size[0] / 2))
       new Spinny(players, normal).spawn(origin)
     }
+  },
+  reload: function() {
+    var distance = Vector.subtracted(player.pos, this.pos)
+    this.shotDirection = Vector.normalized(distance)
   },
   update: function() {
     if (-this.dir[1] * (this.pos[1] - Display.size[1] / 2) < 0) {
@@ -351,6 +416,8 @@ Player.prototype = extend(Ship, {
     boost = new Boost().spawn(Vector.subtracted(pos, [Boost.prototype.size[0], 0]))
     boost.attach(this, [-this.size[0] / 2 - Boost.prototype.size[0] / 2 + .4, 0])
     players.push(this)
+    this.hitboxSize = [0.2, 0.2]
+    // var hitbox = foreground.circle(Vector.scaled(this.hitboxSize, 2), 'lime')(this.pos)
     return ship
   },
   kill: function() {
@@ -416,8 +483,10 @@ function main() {
   background.rect(Display.size, ['#9cf', 'white'])()
   background.rect(half, '#454E69')(Vector.multiplied(Display.size, [0, 1 / 2]))
 
-  background.circle(1, 'white')([24, 4])
-  mountains = foreground.sprite('mountains', [16, 1], 'black')([24, 11.6])
+  ctx = foreground.parent.context
+
+  mountains = foreground.sprite('mountains', [32, 1])([24, 11.6])
+  crag = foreground.sprite('crag', [3, 6])([8, 18])
 
   player = new Player({
     l: 'ArrowLeft',
@@ -442,9 +511,20 @@ function main() {
       while (i--) {
         sprites[i].update()
       }
-      foreground.update()
+
       mountains.pos[0] -= 0.01
+      if (mountains.pos[0] < -mountains.size[0] / 2) {
+        mountains.pos[0] += Display.size[0] + mountains.size[0]
+      }
+
+      crag.pos[0] -= 0.25
+      if (crag.pos[0] < -crag.size[0] / 2) {
+        crag.pos[0] += Display.size[0] + crag.size[0]
+      }
+
       background.update()
+      foreground.update()
+
     }
     if (Input.tapped.KeyP) {
       paused = !paused
@@ -453,4 +533,4 @@ function main() {
 }
 
 Display.init(app)
-Display.load(['ship', 'spear' , 'boost', 'mountains', 'enemy', 'explosion', 'spinny', 'spark'], main)
+Display.load(['ship', 'spear', 'boost', 'mountains', 'crag', 'enemy', 'explosion', 'spinny', 'spark'], main)

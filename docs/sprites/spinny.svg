@@ -1,20 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" shape-rendering="crispEdges">
-  <style>
-    @keyframes rotate {
-      from {
-        transform: rotate(360deg);
-      }
-      to {
-        transform: rotate(0);
-      }
-    }
-    #spinny {
-      transform-origin: center;
-      animation: rotate 0.25s linear infinite;
-    }
-  </style>
-  <g id="spinny">
-    <ellipse fill="orange" cx="12" cy="12" rx="9" ry="12"/>
-    <ellipse fill="white"  cx="12" cy="12" rx="8" ry="8"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="24" viewBox="0 0 144 24" shape-rendering="crispEdges">
+  <g id="frame-1">
+    <ellipse fill="white" cx="12" cy="12" rx="8" ry="12"/>
+    <ellipse fill="white"  cx="12" cy="12" rx="6" ry="8"/>
+  </g>
+  <g id="frame-2" transform="translate(24 0) rotate(30 12 12)">
+    <ellipse fill="orange" cx="12" cy="12" rx="8" ry="12"/>
+    <ellipse fill="white"  cx="12" cy="12" rx="6" ry="8"/>
+  </g>
+  <g id="frame-3" transform="translate(48 0) rotate(60 12 12)">
+    <ellipse fill="orange" cx="12" cy="12" rx="8" ry="12"/>
+    <ellipse fill="white"  cx="12" cy="12" rx="6" ry="8"/>
+  </g>
+  <g id="frame-4" transform="translate(72 0) rotate(90 12 12)">
+    <ellipse fill="orange" cx="12" cy="12" rx="8" ry="12"/>
+    <ellipse fill="white"  cx="12" cy="12" rx="6" ry="8"/>
+  </g>
+  <g id="frame-5" transform="translate(96 0) rotate(120 12 12)">
+    <ellipse fill="orange" cx="12" cy="12" rx="8" ry="12"/>
+    <ellipse fill="white"  cx="12" cy="12" rx="6" ry="8"/>
+  </g>
+  <g id="frame-6" transform="translate(120 0) rotate(150 12 12)">
+    <ellipse fill="orange" cx="12" cy="12" rx="8" ry="12"/>
+    <ellipse fill="white"  cx="12" cy="12" rx="6" ry="8"/>
   </g>
 </svg>

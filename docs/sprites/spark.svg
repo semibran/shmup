@@ -1,4 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6 6" shape-rendering="crispEdges">
-  <polygon fill="lime"  points="0,2 2,0 2,1 4,0 3,2 6,3 3,4 4,6 2,5 2,6 0,4 1,3"/>
-  <polygon fill="white" points="0,2 2,2 4,3 2,4 0,4 1,3"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="12" height="6" viewBox="0 0 12 6" shape-rendering="crispEdges">
+  <g id="frame-1">
+    <polygon fill="lime"  points="0,2 2,0 2,1 4,0 3,2 6,3 3,4 4,6 2,5 2,6 0,4 1,3"/>
+    <polygon fill="white" points="0,2 2,2 4,3 2,4 0,4 1,3"/>
+  </g>
+  <g id="frame-2" fill="lime" transform="translate(6 0)">
+    <polygon points="1,1 2,1 2,0"/>
+    <polygon points="1,5 2,5 2,6"/>
+
+    <polygon points="3,0 4,0 4,1"/>
+    <polygon points="3,6 4,6 4,5"/>
+
+    <polygon points="5,2 6,3 5,4"/>
+  </g>
 </svg>
