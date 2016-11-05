@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" shape-rendering="crispEdges">
+  <g id="sun" fill="white">
+    <circle opacity="0.05" cx="10" cy="10" r="10"/>
+    <circle opacity="0.15" cx="10" cy="10" r="8"/>
+    <circle opacity="0.25" cx="10" cy="10" r="6"/>
+    <circle opacity="0.35" cx="10" cy="10" r="4"/>
+    <circle opacity="1"   cx="10" cy="10" r="2"/>
+  </g>
+</svg>

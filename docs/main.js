@@ -3,6 +3,7 @@ var Display = (function() {
   var sprites = {};
   var scale = 32;
   var size = [scale, scale * 3 / 4];
+  var flashing = false;
   var element;
   function onresize() {
     // requestAnimationFrame(function() {
@@ -61,60 +62,62 @@ var Display = (function() {
     }
   }
   function drawChild(child) {
-    var parent  = child.parent;
-    var unit    = parent.rect.width / scale;
-    var ctx     = parent.context;
-    var child, color, gradient;
-    var cx, cy, x, y, w, h, box = child.drawBox || getDrawBox(child);
+    if (!flashing) {
+      var parent  = child.parent;
+      var unit    = parent.rect.width / scale;
+      var ctx     = parent.context;
+      var child, color, gradient;
+      var cx, cy, x, y, w, h, box = child.drawBox || getDrawBox(child);
 
-    x = box.pos [0];
-    y = box.pos [1];
-    w = box.size[0];
-    h = box.size[1];
+      x = box.pos [0];
+      y = box.pos [1];
+      w = box.size[0];
+      h = box.size[1];
 
-    cx = x; // + w / 2
-    cy = y; // + h / 2
+      cx = x; // + w / 2
+      cy = y; // + h / 2
 
-    color = child.color;
-    if (typeof color === 'object' && color !== null) {
-      if (typeof w !== 'undefined' && typeof h !== 'undefined') {
-        gradient = ctx.createLinearGradient(0, 0, 0, h);
-        color.some(function(color, index) {
-          gradient.addColorStop(index, color);
-        });
-        color = gradient;
+      color = child.color;
+      if (typeof color === 'object' && color !== null) {
+        if (typeof w !== 'undefined' && typeof h !== 'undefined') {
+          gradient = ctx.createLinearGradient(0, 0, 0, h);
+          color.some(function(color, index) {
+            gradient.addColorStop(index, color);
+          });
+          color = gradient;
+        }
       }
-    }
 
-    ctx.fillStyle = color;
+      ctx.fillStyle = color;
 
-    if (child.type === 'rect') {
-      ctx.fillRect(x, y, w, h);
-    } else if (child.type === 'circle') {
-      ctx.beginPath();
-      ctx.arc(x + w / 2, y + h / 2, (w + h) / 4, 0, 2 * Math.PI);
-      ctx.strokeStyle = ctx.fillStyle;
-      ctx.stroke();
-      ctx.closePath();
-    } else if (child.type === 'text') {
-      ctx.font = unit * 2 + 'px Roboto, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(child.content, cx, cy, w, h);
-    } else if (child.type === 'sprite') {
-      var sprite = child;
-      var image = sprites[child.id][color || 'colored'];
-      var sw = image.height * w / h;
-      var sh = image.height;
-      var sx = sw * child.index;
-      var sy = 0;
-      ctx.drawImage(image, sx, sy, sw, sh, x, y, w, h);
+      if (child.type === 'rect') {
+        ctx.fillRect(x, y, w, h);
+      } else if (child.type === 'circle') {
+        ctx.beginPath();
+        ctx.arc(x + w / 2, y + h / 2, (w + h) / 4, 0, 2 * Math.PI);
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.stroke();
+        ctx.closePath();
+      } else if (child.type === 'text') {
+        ctx.font = unit * 2 + 'px Roboto, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(child.content, cx, cy, w, h);
+      } else if (child.type === 'sprite') {
+        var sprite = child;
+        var image = sprites[child.id][color || 'colored'];
+        var sw = image.height * w / h;
+        var sh = image.height;
+        var sx = sw * child.index;
+        var sy = 0;
+        ctx.drawImage(image, sx, sy, sw, sh, x, y, w, h);
+      }
+      child.drawnBox = {
+        pos:  [x, y],
+        size: [w, h],
+        color: child.color
+      };
     }
-    child.drawnBox = {
-      pos:  [x, y],
-      size: [w, h],
-      color: child.color
-    };
   }
   function eraseChild(child) {
     var box = child.drawnBox;
@@ -261,8 +264,13 @@ var Display = (function() {
     size: size,
     scale: scale,
     init: function(parent) {
+      parent = parent || document.body;
       init = true;
-      element = parent || document.body;
+      element = document.createElement('div');
+      element.id = 'display';
+      element.style.width = '100%';
+      element.style.height = '100%';
+      parent.appendChild(element);
       window.addEventListener('load', onresize);
       window.addEventListener('resize', onresize);
     },
@@ -330,6 +338,24 @@ var Display = (function() {
       canvases.push(object);
       update(object);
       return object.methods
+    },
+    flash: function(color) {
+      flashing = true;
+      var i = canvases.length, canvas;
+      while (i--) {
+        canvas = canvases[i];
+        canvas.context.fillStyle = color || 'white';
+        canvas.context.fillRect(0, 0, canvas.element.width, canvas.element.height);
+      }
+      requestAnimationFrame(function() {
+        flashing = false;
+        var i = canvases.length, canvas;
+        while (i--) {
+          canvas = canvases[i];
+          canvas.context.clearRect(0, 0, canvas.element.width, canvas.element.height);
+          drawCanvas(canvas, true);
+        }
+      });
     }
   }
 }());
@@ -421,7 +447,10 @@ var Vector = {
     return [Math.cos(radians), Math.sin(radians)]
   },
   toDegrees: function(vector) {
-    return Math.atan2(vector[1], vector[0]) * 180 / Math.PI + 90
+    var degrees = Math.atan2(vector[1], vector[0]) * 180 / Math.PI + 90;
+    while (degrees < 0)
+      degrees += 360;
+    return degrees
   },
   getNormal: function(direction) {
     var n, t = typeof direction;
@@ -683,6 +712,8 @@ Sprite.prototype = {
     this.hitboxSize = [min, min];
     this.hitbox = this.getHitbox();
 
+    this.children = [];
+
     this.frameTimer = 0;
     sprites.push(this);
     return this
@@ -693,6 +724,9 @@ Sprite.prototype = {
       sprites.splice(index, 1);
     }
     foreground.delete(this.obj);
+    this.children.some(function(child) {
+      child.kill();
+    });
   },
   flash: function() {
     this.flashing = Date.now();
@@ -707,10 +741,11 @@ Sprite.prototype = {
     }
   },
   attach: function(target, offset) {
+    this.attachOffset = offset || [0, 0];
+    this.pos = Vector.added(target.pos, this.attachOffset);
     this.attached = true;
     this.attachee = target;
-    this.offset = offset || [0, 0];
-    this.pos = this.obj.pos = target.pos;
+    this.attachee.children.push(this);
   },
   update: function() {
     if (this.flashing && Date.now() - this.flashing > 1000 / 60) {
@@ -736,6 +771,9 @@ Sprite.prototype = {
         this.shakeOffset = null;
         this.shaking = false;
       }
+    }
+    if (this.attached) {
+      this.pos = Vector.added(this.attachee.pos, this.attachOffset);
     }
     this.obj.pos = Vector.added(this.pos, this.offset);
     this.hitbox = this.getHitbox();
@@ -778,7 +816,8 @@ function Boost() {
 
 Boost.prototype = extend(Effect, {
   sprite: 'boost',
-  size: [2, .5],
+  size: [1, .25],
+  frames: 2,
   duration: Infinity
 });
 
@@ -827,7 +866,7 @@ Projectile.prototype = extend(Sprite, {
     Sprite.prototype.kill.call(this, silent);
   },
   update: function() {
-    var pastL = this.dir[0] < 0 && this.pos[0] - this.size[0] / 2 < 0;
+    var pastL = this.dir[0] < 0 && this.pos[0] < -this.size[0];
     var pastR = this.dir[0] > 0 && this.pos[0] + this.size[0] / 2 > Display.size;
     var pastU = this.dir[1] < 0 && this.pos[1] - this.size[1] / 2 < 0;
     var pastD = this.dir[1] > 0 && this.pos[1] + this.size[1] / 2 > Display.size;
@@ -883,6 +922,90 @@ Spinny.prototype = extend(Projectile, {
   sprite: 'spinny',
   frames: 6,
   frameDelay: 2
+});
+
+function Missile(targets) {
+  Projectile.call(this, targets);
+}
+
+Missile.prototype = extend(Projectile, {
+  spd: 0.01,
+  frc: 0.99,
+  dir: Vector.DOWN,
+  size: [0.5 * 3, 0.5],
+  sprite: 'missile',
+  spawn: function(pos) {
+    var missile = Projectile.prototype.spawn.call(this, pos);
+    this.dropping = true;
+    this.dropPos  = Vector.clone(pos);
+    return missile
+  },
+  ignite: function() {
+    var dist    = Vector.subtracted(this.targets[0].pos, this.pos);
+    var offset  = [-(Missile.prototype.size[0] / 2 + MissileBoost.prototype.size[0] / 2), 0];
+    var origin  = Vector.added(this.pos, offset);
+    var degrees = Vector.toDegrees(dist) - 90;
+    var range   = 5;
+    if (degrees < -range) {
+      degrees = -range;
+    }
+    if (degrees > range) {
+      degrees = range;
+    }
+    this.vel[1] = 0;
+    this.dropping = false;
+    this.dir = Vector.fromDegrees(degrees + 90);
+    this.spd = 0.02;
+    boost = new MissileBoost().spawn(origin);
+    boost.attach(this, offset);
+  },
+  update: function() {
+    if (this.dropping) {
+      if (this.pos[1] - this.dropPos[1] > 1) {
+        this.ignite();
+      }
+    } else {
+      var origin = Vector.added(this.pos, [-Missile.prototype.size[0] / 2, 0]);
+      function getOffset() {
+        var x = (Random.get() * 2 - 1) * 0.25;
+        var y = (Random.get() * 2 - 1) * 0.25;
+        return Vector.added(origin, [x, y])
+      }
+      var i = 2;
+      while (i--) {
+        new Smoke().spawn(getOffset());
+      }
+    }
+    Projectile.prototype.update.call(this);
+  }
+});
+
+function MissileBoost() {
+
+}
+
+MissileBoost.prototype = extend(Effect, {
+  sprite: 'missile-boost',
+  size: [.4 * 6, .4],
+  frames: 2,
+  duration: Infinity
+});
+
+function Smoke() {
+
+}
+
+Smoke.prototype = extend(Effect, {
+  sprite: 'smoke',
+  size: [0.5, 0.5],
+  spd: 0.1,
+  dir: Vector.UP,
+  duration: 9,
+  frames: 3,
+  frameDelay: 3,
+  update: function() {
+    Effect.prototype.update.call(this);
+  }
 });
 
 
@@ -963,7 +1086,7 @@ Enemy.prototype = extend(Ship, {
   shotCooldown:  2,
   shotSpacing:   .25,
   shotsPerBurst: 9,
-  shotsPerRound: 9,
+  shotsPerRound: 11,
   spd: 0.0025,
   frc: 0.9975,
   dir: Vector.UP,
@@ -984,7 +1107,7 @@ Enemy.prototype = extend(Ship, {
     var origin   = Vector.added(this.pos, Vector.scale(this.shotDirection, this.size[0] / 2));
     var imax = this.shotsPerBurst - this.shotsFired % 2;
     var i = imax;
-    var burstSpacing = 45 * 0.25;
+    var burstSpacing = 45 * 0.2;
     while (i--) {
       angle = centerAngle - imax / 2 * burstSpacing + (i + 0.5) * burstSpacing;
       normal = Vector.fromDegrees(angle);
@@ -1023,6 +1146,8 @@ Player.prototype = extend(Ship, {
     boost.attach(this, [-this.size[0] / 2 - Boost.prototype.size[0] / 2 + .4, 0]);
     players.push(this);
     this.hitboxSize = [0.2, 0.2];
+    this.altTimerMax = 45;
+    this.altTimer = this.altTimerMax;
     // var hitbox = foreground.circle(Vector.scaled(this.hitboxSize, 2), 'lime')(this.pos)
     return ship
   },
@@ -1030,11 +1155,19 @@ Player.prototype = extend(Ship, {
     Ship.prototype.kill.call(this);
     remove(players, this);
   },
+  hit: function() {
+    Ship.prototype.hit.call(this);
+    Display.flash();
+  },
+  flash: function() {
+    Ship.prototype.flash.call(this);
+    this.obj.color = 'black';
+  },
   shoot: function() {
     var origin = Vector.added(this.pos, [.5, .3]);
     new Spark().spawn(Vector.subtracted(origin, [Spear.prototype.size[0] / 2, 0]));
     new Spear(enemies).spawn(origin);
-    new Spear(enemies).spawn(Vector.added(origin, [0, -0.33]));
+    // new Spear(enemies).spawn(Vector.added(origin, [0, -0.33]))
   },
   update: function() {
     var dx = 0, dy = 0, controls = this.controls;
@@ -1060,6 +1193,11 @@ Player.prototype = extend(Ship, {
       }
       if (Input.pressed[controls.a]) {
         this.pushTrigger();
+        if (!this.altTimer--) {
+          var origin = Vector.added(this.pos, [0, this.size[1] / 2]);
+          new Missile(enemies).spawn(origin);
+          this.altTimer = this.altTimerMax;
+        }
       } else {
         this.releaseTrigger();
       }
@@ -1084,15 +1222,16 @@ function main() {
   background = Display.create('background');
   foreground = Display.create('foreground');
 
-  var half = Vector.multiplied(Display.size, [1, 1 / 2]);
-
   background.rect(Display.size, ['#9cf', 'white'])();
-  background.rect(half, '#454E69')(Vector.multiplied(Display.size, [0, 1 / 2]));
+  background.rect(Vector.multiplied(Display.size, [1, 1 / 2]), '#449')(Vector.multiplied(Display.size, [0, 1 / 2]));
 
-  ctx = foreground.parent.context;
+  clouds = background.sprite('clouds', [40, 4])([16, 10]);
+  sun = background.sprite('sun', [10, 10])([24, 6]);
 
   mountains = foreground.sprite('mountains', [32, 1])([24, 11.6]);
   crag = foreground.sprite('crag', [3, 6])([8, 18]);
+
+  ctx = foreground.parent.context;
 
   player = new Player({
     l: 'ArrowLeft',
@@ -1118,12 +1257,12 @@ function main() {
         sprites[i].update();
       }
 
-      mountains.pos[0] -= 0.01;
+      mountains.pos[0] -= 0.025;
       if (mountains.pos[0] < -mountains.size[0] / 2) {
         mountains.pos[0] += Display.size[0] + mountains.size[0];
       }
 
-      crag.pos[0] -= 0.25;
+      crag.pos[0] -= 0.5;
       if (crag.pos[0] < -crag.size[0] / 2) {
         crag.pos[0] += Display.size[0] + crag.size[0];
       }
@@ -1139,4 +1278,4 @@ function main() {
 }
 
 Display.init(app);
-Display.load(['ship', 'spear', 'boost', 'mountains', 'crag', 'enemy', 'explosion', 'spinny', 'spark'], main);
+Display.load(['ship', 'spear', 'boost', 'mountains', 'crag', 'enemy', 'explosion', 'spinny', 'spark', 'missile', 'missile-boost', 'smoke', 'clouds', 'sun'], main);

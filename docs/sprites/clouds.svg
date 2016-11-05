@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="8" viewBox="0 0 80 8" shape-rendering="crispEdges">
+  <g id="clouds" transform="scale(2, 1)">
+    <polygon fill="white" points="0,2 2,3 6,4 8,5 11,5 15,3 16,1 19,0 21,1 25,0 26,1 26,2 25,2 24,3 25,3 27,4 26,5 28,6 32,5 34,4 35,3 39,2 40,2 40,8 0,8"/>
+    <polygon fill="#ccf"  points="0,4 9,7 12,6 15,4 17,3 20,2 24,4 25,4 24,5 27,7 35,6 38,4 40,4 40,8 0,8"/>
+  </g>
+</svg>

@@ -85,7 +85,10 @@ export default {
     return [Math.cos(radians), Math.sin(radians)]
   },
   toDegrees: function(vector) {
-    return Math.atan2(vector[1], vector[0]) * 180 / Math.PI + 90
+    var degrees = Math.atan2(vector[1], vector[0]) * 180 / Math.PI + 90
+    while (degrees < 0)
+      degrees += 360
+    return degrees
   },
   getNormal: function(direction) {
     var n, t = typeof direction

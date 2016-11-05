@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="8" viewBox="0 0 96 8" shape-rendering="crispEdges">
+  <g id="frame-1">
+    <ellipse fill="orange" cx="24" cy="4" rx="24" ry="4"/>
+    <ellipse fill="white"  cx="28" cy="4" rx="20" ry="3"/>
+    <polygon fill="orange" points="48,4 44,0 44,8"/>
+  </g>
+  <g id="frame-2" transform="translate(48 0)">
+    <ellipse fill="white" cx="24" cy="4" rx="24" ry="4"/>
+  </g>
+</svg>

@@ -3,6 +3,7 @@ export default (function() {
   var sprites = {}
   var scale = 32
   var size = [scale, scale * 3 / 4]
+  var flashing = false
   var element
   function onresize() {
     // requestAnimationFrame(function() {
@@ -61,59 +62,61 @@ export default (function() {
     }
   }
   function drawChild(child) {
-    var parent  = child.parent
-    var unit    = parent.rect.width / scale
-    var ctx     = parent.context
-    var child, color, gradient
-    var cx, cy, x, y, w, h, box = child.drawBox || getDrawBox(child)
+    if (!flashing) {
+      var parent  = child.parent
+      var unit    = parent.rect.width / scale
+      var ctx     = parent.context
+      var child, color, gradient
+      var cx, cy, x, y, w, h, box = child.drawBox || getDrawBox(child)
 
-    x = box.pos [0]
-    y = box.pos [1]
-    w = box.size[0]
-    h = box.size[1]
+      x = box.pos [0]
+      y = box.pos [1]
+      w = box.size[0]
+      h = box.size[1]
 
-    cx = x // + w / 2
-    cy = y // + h / 2
+      cx = x // + w / 2
+      cy = y // + h / 2
 
-    color = child.color
-    if (typeof color === 'object' && color !== null) {
-      if (typeof w !== 'undefined' && typeof h !== 'undefined') {
-        gradient = ctx.createLinearGradient(0, 0, 0, h)
-        color.some(function(color, index) {
-          gradient.addColorStop(index, color)
-        })
-        color = gradient
+      color = child.color
+      if (typeof color === 'object' && color !== null) {
+        if (typeof w !== 'undefined' && typeof h !== 'undefined') {
+          gradient = ctx.createLinearGradient(0, 0, 0, h)
+          color.some(function(color, index) {
+            gradient.addColorStop(index, color)
+          })
+          color = gradient
+        }
       }
-    }
 
-    ctx.fillStyle = color
+      ctx.fillStyle = color
 
-    if (child.type === 'rect') {
-      ctx.fillRect(x, y, w, h)
-    } else if (child.type === 'circle') {
-      ctx.beginPath()
-      ctx.arc(x + w / 2, y + h / 2, (w + h) / 4, 0, 2 * Math.PI)
-      ctx.strokeStyle = ctx.fillStyle
-      ctx.stroke()
-      ctx.closePath()
-    } else if (child.type === 'text') {
-      ctx.font = unit * 2 + 'px Roboto, sans-serif'
-      ctx.textAlign = 'left'
-      ctx.textBaseline = 'top'
-      ctx.fillText(child.content, cx, cy, w, h)
-    } else if (child.type === 'sprite') {
-      var sprite = child
-      var image = sprites[child.id][color || 'colored']
-      var sw = image.height * w / h
-      var sh = image.height
-      var sx = sw * child.index
-      var sy = 0
-      ctx.drawImage(image, sx, sy, sw, sh, x, y, w, h)
-    }
-    child.drawnBox = {
-      pos:  [x, y],
-      size: [w, h],
-      color: child.color
+      if (child.type === 'rect') {
+        ctx.fillRect(x, y, w, h)
+      } else if (child.type === 'circle') {
+        ctx.beginPath()
+        ctx.arc(x + w / 2, y + h / 2, (w + h) / 4, 0, 2 * Math.PI)
+        ctx.strokeStyle = ctx.fillStyle
+        ctx.stroke()
+        ctx.closePath()
+      } else if (child.type === 'text') {
+        ctx.font = unit * 2 + 'px Roboto, sans-serif'
+        ctx.textAlign = 'left'
+        ctx.textBaseline = 'top'
+        ctx.fillText(child.content, cx, cy, w, h)
+      } else if (child.type === 'sprite') {
+        var sprite = child
+        var image = sprites[child.id][color || 'colored']
+        var sw = image.height * w / h
+        var sh = image.height
+        var sx = sw * child.index
+        var sy = 0
+        ctx.drawImage(image, sx, sy, sw, sh, x, y, w, h)
+      }
+      child.drawnBox = {
+        pos:  [x, y],
+        size: [w, h],
+        color: child.color
+      }
     }
   }
   function eraseChild(child) {
@@ -261,8 +264,13 @@ export default (function() {
     size: size,
     scale: scale,
     init: function(parent) {
+      parent = parent || document.body
       init = true
-      element = parent || document.body
+      element = document.createElement('div')
+      element.id = 'display'
+      element.style.width = '100%'
+      element.style.height = '100%'
+      parent.appendChild(element)
       window.addEventListener('load', onresize)
       window.addEventListener('resize', onresize)
     },
@@ -330,6 +338,24 @@ export default (function() {
       canvases.push(object)
       update(object)
       return object.methods
+    },
+    flash: function(color) {
+      flashing = true
+      var i = canvases.length, canvas
+      while (i--) {
+        canvas = canvases[i]
+        canvas.context.fillStyle = color || 'white'
+        canvas.context.fillRect(0, 0, canvas.element.width, canvas.element.height)
+      }
+      requestAnimationFrame(function() {
+        flashing = false
+        var i = canvases.length, canvas
+        while (i--) {
+          canvas = canvases[i]
+          canvas.context.clearRect(0, 0, canvas.element.width, canvas.element.height)
+          drawCanvas(canvas, true)
+        }
+      })
     }
   }
 }())
