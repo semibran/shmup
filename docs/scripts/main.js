@@ -42,6 +42,7 @@ var shakeSequence = [
 ]
 
 Sprite.prototype = {
+  sprite: null,
   size: [1, 1],
   pos: null,
   dir: [0, 0],
@@ -63,8 +64,10 @@ Sprite.prototype = {
     }
     this.pos = Vector.clone(pos)
     this.vel = [0, 0]
-    this.obj = foreground.sprite(this.sprite, this.size, this.sizeSub || this.size)(this.pos)
-    this.obj.pos = this.pos
+    if (this.sprite) {
+      this.obj = foreground.sprite(this.sprite, this.size, this.sizeSub || this.size)(this.pos)
+      this.obj.pos = this.pos
+    }
     this.attached = false
     this.flashing = false
 
@@ -88,7 +91,9 @@ Sprite.prototype = {
     if (index !== -1) {
       sprites.splice(index, 1)
     }
-    foreground.delete(this.obj)
+    if (this.obj) {
+      foreground.delete(this.obj)
+    }
     this.children.some(function(child) {
       child.kill()
     })
@@ -140,14 +145,16 @@ Sprite.prototype = {
     if (this.attached) {
       this.pos = Vector.added(this.attachee.pos, this.attachOffset)
     }
-    this.obj.pos = Vector.added(this.pos, this.offset)
-    this.hitbox = this.getHitbox()
-    if (++this.frameTimer >= this.frameDelay) {
-      this.frameTimer = 0
-      if (++this.obj.index >= this.frames) {
-        this.obj.index = 0
+    if (this.obj) {
+      this.obj.pos = Vector.added(this.pos, this.offset)
+      if (++this.frameTimer >= this.frameDelay) {
+        this.frameTimer = 0
+        if (++this.obj.index >= this.frames) {
+          this.obj.index = 0
+        }
       }
     }
+    this.hitbox = this.getHitbox()
   }
 }
 
@@ -186,27 +193,40 @@ Boost.prototype = extend(Effect, {
   duration: Infinity
 })
 
-function Explosion(size) {
+function Impact(size) {
   this.size = size || Vector.clone(this.size)
 }
 
-Explosion.prototype = extend(Effect, {
+Impact.prototype = extend(Effect, {
   sprite: 'explosion',
   size: [1, 1],
   duration: 8,
   frames: 4,
   frameDelay: 2,
   update: function() {
-    // var origin = this.pos
-    // function getOffset() {
-    //   var x = (Random.get() * 2 - 1) * 0.25
-    //   var y = (Random.get() * 2 - 1) * 0.25
-    //   return Vector.added(origin, [x, y])
-    // }
-    // var i = 2
-    // while (i--) {
-    //   new Smoke().spawn(getOffset())
-    // }
+    Effect.prototype.update.call(this)
+  }
+})
+
+function Explosion() {
+
+}
+
+Explosion.prototype = extend(Effect, {
+  duration: 0.25 * 60,
+  update: function() {
+    var amount = 1
+    var offset = 1
+    var origin = this.pos
+    function getOffset() {
+      var x = (Random.get() * 2 - 1) * offset
+      var y = (Random.get() * 2 - 1) * offset
+      return Vector.added(origin, [x, y])
+    }
+    while (amount--) {
+      new Impact().spawn(getOffset())
+      new Smoke().spawn(getOffset())
+    }
     Effect.prototype.update.call(this)
   }
 })
@@ -239,7 +259,7 @@ Projectile.prototype = extend(Sprite, {
       var dx = Random.get(-2, 2)
       var dy = Random.get(-2, 2)
       var d  = Vector.scaled([dx, dy], 0.1)
-      new Explosion().spawn(Vector.added(this.pos, d))
+      new Impact().spawn(Vector.added(this.pos, d))
     }
     Sprite.prototype.kill.call(this, silent)
   },
@@ -310,6 +330,7 @@ Missile.prototype = extend(Projectile, {
   spd: 0.01,
   frc: 0.99,
   dir: Vector.DOWN,
+  power: 3,
   size: [0.5 * 3, 0.5],
   sprite: 'missile',
   spawn: function(pos) {
@@ -318,21 +339,33 @@ Missile.prototype = extend(Projectile, {
     this.dropPos  = Vector.clone(pos)
     return missile
   },
+  kill: function(silent) {
+    if (!silent) {
+      new Explosion().spawn(this.pos)
+      Display.shake()
+    }
+    Projectile.prototype.kill.call(this)
+  },
   ignite: function() {
-    var dist    = Vector.subtracted(this.targets[0].pos, this.pos)
+    var dist, degrees, range, dir
+    var target  = this.targets[0]
     var offset  = [-(Missile.prototype.size[0] / 2 + MissileBoost.prototype.size[0] / 2), 0]
     var origin  = Vector.added(this.pos, offset)
-    var degrees = Vector.toDegrees(dist) - 90
-    var range   = 5
-    if (degrees < -range) {
-      degrees = -range
-    }
-    if (degrees > range) {
-      degrees = range
+    if (target) {
+      dist    = Vector.subtracted(target.pos, this.pos)
+      degrees = Vector.toDegrees(dist) - 90
+      range   = 5
+      if (degrees < -range) {
+        degrees = -range
+      }
+      if (degrees > range) {
+        degrees = range
+      }
+      dir     = Vector.fromDegrees(degrees + 90)
     }
     this.vel[1] = 0
     this.dropping = false
-    this.dir = Vector.fromDegrees(degrees + 90)
+    this.dir = dir || Vector.RIGHT
     this.spd = 0.02
     boost = new MissileBoost().spawn(origin)
     boost.attach(this, offset)
@@ -392,6 +425,7 @@ function Ship() {
 }
 
 Ship.prototype = extend(Sprite, {
+  dying:         false,
   health:        1,
   defense:       1,
   shotType:      'spread',
@@ -404,11 +438,37 @@ Ship.prototype = extend(Sprite, {
   shotsFired:    0,
   shooting:      false,
   overheating:   false,
+  kill: function() {
+    if (!this.dying) {
+      this.explode()
+    }
+    this.dying = true
+    this.shooting = false
+    this.dir = Vector.DOWN_LEFT
+    this.spd = 0.01
+    this.frc = 0.99
+  },
   shoot: function() {
 
   },
   reload: function() {
 
+  },
+  smoke: function(origin) {
+    var amount = 3
+    var offset = 0.5
+    origin = origin || this.pos
+    function getOffset() {
+      var x = (Random.get() * 2 - 1) * offset
+      var y = (Random.get() * 2 - 1) * offset
+      return Vector.added(origin, [x, y])
+    }
+    while (amount--) {
+      new Smoke().spawn(getOffset())
+    }
+  },
+  explode: function() {
+    new Explosion().spawn(this.pos)
   },
   hit: function(damage) {
     this.health -= damage / this.defense
@@ -416,30 +476,39 @@ Ship.prototype = extend(Sprite, {
     this.shake()
   },
   update: function() {
-    if (this.shooting) {
-      if (!this.overheating) {
-        this.shotTimer++
-        if (this.shotTimer >= this.shotSpacing * 60) {
-          this.shotTimer = 0
-          this.shoot()
-          this.shotsFired++
-          if (this.shotsFired >= this.shotsPerRound) {
-            this.shotsFired = 0
-            this.overheating = true
+    if (!this.dying) {
+      if (this.shooting) {
+        if (!this.overheating) {
+          this.shotTimer++
+          if (this.shotTimer >= this.shotSpacing * 60) {
+            this.shotTimer = 0
+            this.shoot()
+            this.shotsFired++
+            if (this.shotsFired >= this.shotsPerRound) {
+              this.shotsFired = 0
+              this.overheating = true
+            }
           }
         }
       }
-    }
-    if (this.overheating) {
-      this.shotTimer++
-      if (this.shotTimer >= this.shotCooldown * 60) {
-        this.shotTimer = 0
-        this.overheating = false
-        this.reload()
+      if (this.overheating) {
+        this.shotTimer++
+        if (this.shotTimer >= this.shotCooldown * 60) {
+          this.shotTimer = 0
+          this.overheating = false
+          this.reload()
+        }
       }
-    }
-    if (this.health <= 0) {
-      this.kill()
+      if (this.health <= 0) {
+        this.kill()
+      }
+    } else {
+      this.smoke()
+      if (this.pos[1] > Display.size[1]) {
+        Display.flash()
+        Display.shake()
+        Sprite.prototype.kill.call(this)
+      }
     }
     Sprite.prototype.update.call(this)
   },
@@ -460,11 +529,11 @@ function Enemy() {
 
 Enemy.prototype = extend(Ship, {
   health: 1,
-  defense: Infinity,
-  shotCooldown:  2,
+  defense: 32,
+  shotCooldown:  1,
   shotSpacing:   .25,
-  shotsPerBurst: 9,
-  shotsPerRound: 11,
+  shotsPerBurst: 3,
+  shotsPerRound: 3,
   spd: 0.0025,
   frc: 0.9975,
   dir: Vector.UP,
@@ -483,9 +552,9 @@ Enemy.prototype = extend(Ship, {
   shoot: function() {
     var centerAngle = Vector.toDegrees(this.shotDirection)
     var origin   = Vector.added(this.pos, Vector.scale(this.shotDirection, this.size[0] / 2))
-    var imax = this.shotsPerBurst - this.shotsFired % 2
+    var imax = this.shotsPerBurst // - this.shotsFired % 2
     var i = imax
-    var burstSpacing = 45 * 0.2
+    var burstSpacing = 45 * 0.25
     while (i--) {
       angle = centerAngle - imax / 2 * burstSpacing + (i + 0.5) * burstSpacing
       normal = Vector.fromDegrees(angle)
@@ -498,8 +567,10 @@ Enemy.prototype = extend(Ship, {
     this.shotDirection = Vector.normalized(distance)
   },
   update: function() {
-    if (-this.dir[1] * (this.pos[1] - Display.size[1] / 2) < 0) {
-      this.dir[1] *= -1
+    if (!this.dying) {
+      if (-this.dir[1] * (this.pos[1] - Display.size[1] / 2) < 0) {
+        this.dir[1] *= -1
+      }
     }
     Ship.prototype.update.call(this)
   }
@@ -510,7 +581,6 @@ function Player(controls) {
 }
 
 Player.prototype = extend(Ship, {
-  defense: Infinity,
   shotCooldown:  .15,
   shotSpacing:   .05,
   shotsPerRound: 3,
@@ -533,8 +603,8 @@ Player.prototype = extend(Ship, {
     Ship.prototype.kill.call(this)
     remove(players, this)
   },
-  hit: function() {
-    Ship.prototype.hit.call(this)
+  hit: function(damage) {
+    Ship.prototype.hit.call(this, damage)
     Display.flash()
   },
   flash: function() {
@@ -550,47 +620,54 @@ Player.prototype = extend(Ship, {
   update: function() {
     var dx = 0, dy = 0, controls = this.controls
     var mouse, dist, normal, vel
-    if (controls) {
-      if (Input.pressed[controls.l || controls.left])  dx--
-      if (Input.pressed[controls.r || controls.right]) dx++
-      if (Input.pressed[controls.u || controls.up])    dy--
-      if (Input.pressed[controls.d || controls.down])  dy++
-      if (!dx && !dy) {
-        if (Input.mousePos) {
-          mouse  = Vector.scaled(Input.mousePos, Display.scale)
-          dist   = Vector.subtracted(mouse, this.pos)
-          dx     = dist[0]
-          dy     = dist[1]
+    if (!this.dying) {
+      if (controls) {
+        if (Input.pressed[controls.l || controls.left])  dx--
+        if (Input.pressed[controls.r || controls.right]) dx++
+        if (Input.pressed[controls.u || controls.up])    dy--
+        if (Input.pressed[controls.d || controls.down])  dy++
+        if (!dx && !dy) {
+          if (Input.mousePos) {
+            mouse  = Vector.scaled(Input.mousePos, Display.scale)
+            dist   = Vector.subtracted(mouse, this.pos)
+            dx     = dist[0]
+            dy     = dist[1]
+          }
+        } else {
+          Input.mousePos = null
         }
-      } else {
-        Input.mousePos = null
-      }
-      if (dx || dy) {
-        // normal = Vector.normalized([dx, dy])
-        this.vel = Vector.scaled([dx, dy], 1 / 24)
-      }
-      if (Input.pressed[controls.a]) {
-        this.pushTrigger()
-        if (!this.altTimer--) {
-          var origin = Vector.added(this.pos, [0, this.size[1] / 2])
-          new Missile(enemies).spawn(origin)
-          this.altTimer = this.altTimerMax
+        if (dx || dy) {
+          // normal = Vector.normalized([dx, dy])
+          this.vel = Vector.scaled([dx, dy], 1 / 24)
         }
-      } else {
-        this.releaseTrigger()
+        if (Input.pressed[controls.a]) {
+          this.pushTrigger()
+          if (!this.altTimer--) {
+            var origin = Vector.added(this.pos, [0, this.size[1] / 2])
+            new Missile(enemies).spawn(origin)
+            this.altTimer = this.altTimerMax
+          }
+        } else {
+          this.releaseTrigger()
+        }
       }
-    }
-    if (this.pos[0] < 0) {
-      this.pos[0] = 0
-    }
-    if (this.pos[0] > Display.size[0]) {
-      this.pos[0] = Display.size[0]
-    }
-    if (this.pos[1] < 0) {
-      this.pos[1] = 0
-    }
-    if (this.pos[1] > Display.size[1]) {
-      this.pos[1] = Display.size[1]
+      if (this.pos[0] < 0) {
+        this.pos[0] = 0
+      }
+      if (this.pos[0] > Display.size[0]) {
+        this.pos[0] = Display.size[0]
+      }
+      if (this.pos[1] < 0) {
+        this.pos[1] = 0
+      }
+      if (this.pos[1] > Display.size[1]) {
+        this.pos[1] = Display.size[1]
+      }
+    } else {
+      if (Random.get() < 0.05) {
+        Display.flash()
+        Display.shake()
+      }
     }
     Ship.prototype.update.call(this)
   }

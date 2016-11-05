@@ -268,6 +268,9 @@ export default (function() {
       init = true
       element = document.createElement('div')
       element.id = 'display'
+      element.style.position = 'absolute'
+      element.style.left = '0'
+      element.style.top = '0'
       element.style.width = '100%'
       element.style.height = '100%'
       parent.appendChild(element)
@@ -356,6 +359,22 @@ export default (function() {
           drawCanvas(canvas, true)
         }
       })
+    },
+    shake: function() {
+      var magnitude = 0.5
+      var direction = 1
+      var duration  = 0.25 * 60
+      var position  = 0
+      function shake() {
+        element.style.top = (direction * magnitude) + '%'
+        direction *= -1
+        if (position++ < duration) {
+          requestAnimationFrame(shake)
+        } else {
+          element.style.top = '0'
+        }
+      }
+      shake()
     }
   }
 }())

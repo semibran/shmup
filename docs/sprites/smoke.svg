@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="6" height="2" viewBox="0 0 6 2" shape-rendering="crispEdges">
-  <g id="smoke" fill="white">
+  <g id="smoke" fill="black">
     <g id="frame-1" opacity="0.3">
       <circle cx="1" cy="1" r="1"/>
     </g>
