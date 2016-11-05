@@ -1,11 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="6" height="2" viewBox="0 0 6 2" shape-rendering="crispEdges">
-  <g id="frame-1" opacity="0.5">
-    <circle fill="black" cx="1" cy="1" r="1"/>
-  </g>
-  <g id="frame-2" opacity="0.25" transform="translate(2)">
-    <circle fill="black" cx="1" cy="1" r="1"/>
-  </g>
-  <g id="frame-3" opacity="0.1" transform="translate(4)">
-    <circle fill="black" cx="1" cy="1" r="1"/>
+  <g id="smoke" fill="white">
+    <g id="frame-1" opacity="0.3">
+      <circle cx="1" cy="1" r="1"/>
+    </g>
+    <g id="frame-2" opacity="0.2" transform="translate(2)">
+      <circle cx="1" cy="1" r="1"/>
+    </g>
+    <g id="frame-3" opacity="0.1" transform="translate(4)">
+      <circle cx="1" cy="1" r="1"/>
+    </g>
   </g>
 </svg>

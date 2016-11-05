@@ -830,7 +830,20 @@ Explosion.prototype = extend(Effect, {
   size: [1, 1],
   duration: 8,
   frames: 4,
-  frameDelay: 2
+  frameDelay: 2,
+  update: function() {
+    // var origin = this.pos
+    // function getOffset() {
+    //   var x = (Random.get() * 2 - 1) * 0.25
+    //   var y = (Random.get() * 2 - 1) * 0.25
+    //   return Vector.added(origin, [x, y])
+    // }
+    // var i = 2
+    // while (i--) {
+    //   new Smoke().spawn(getOffset())
+    // }
+    Effect.prototype.update.call(this);
+  }
 });
 
 function Spark() {
@@ -1226,7 +1239,7 @@ function main() {
   background.rect(Vector.multiplied(Display.size, [1, 1 / 2]), '#449')(Vector.multiplied(Display.size, [0, 1 / 2]));
 
   clouds = background.sprite('clouds', [40, 4])([16, 10]);
-  sun = background.sprite('sun', [10, 10])([24, 6]);
+  sun = background.sprite('sun', [10, 10])([25, 5]);
 
   mountains = foreground.sprite('mountains', [32, 1])([24, 11.6]);
   crag = foreground.sprite('crag', [3, 6])([8, 18]);
