@@ -796,9 +796,6 @@ Sprite.prototype = {
         this.shaking = false;
       }
     }
-    if (this.attached) {
-      this.pos = Vector.added(this.attachee.pos, this.attachOffset);
-    }
     if (this.obj) {
       this.obj.pos = Vector.added(this.pos, this.offset);
       if (++this.frameTimer >= this.frameDelay) {
@@ -807,6 +804,14 @@ Sprite.prototype = {
           this.obj.index = 0;
         }
       }
+    }
+    if (this.attached) {
+      this.pos = Vector.added(this.attachee.pos, this.attachOffset);
+    }
+    var child, i = this.children.length;
+    while (i--) {
+      child = this.children[i];
+      child.pos = Vector.added(Vector.added(this.pos, this.offset), child.attachOffset);
     }
     this.hitbox = this.getHitbox();
   }
@@ -984,7 +989,7 @@ Missile.prototype = extend(Projectile, {
   spd: 0.01,
   frc: 0.99,
   dir: Vector.DOWN,
-  power: 3,
+  power: 5,
   size: [0.5 * 3, 0.5],
   sprite: 'missile',
   spawn: function(pos) {
@@ -1183,19 +1188,20 @@ function Enemy() {
 
 Enemy.prototype = extend(Ship, {
   health: 1,
-  defense: 32,
+  defense: 13,
   shotCooldown:  1,
   shotSpacing:   .25,
   shotsPerBurst: 3,
-  shotsPerRound: 3,
+  shotsPerRound: 1,
   spd: 0.0025,
-  frc: 0.9975,
-  dir: Vector.UP,
+  frc: 0.99,
+  dir: [-1, 2],
   size: [2, 2],
-  sprite: 'enemy',
+  sprite: 'eye',
   spawn: function(pos) {
     var hitbox, ship = Ship.prototype.spawn.call(this, pos);
     enemies.push(this);
+    this.reload();
     // hitbox = foreground.circle(Vector.scaled(this.hitboxSize, 0.5), 'lime')(this.pos)
     return ship
   },
@@ -1212,13 +1218,13 @@ Enemy.prototype = extend(Ship, {
     while (i--) {
       angle = centerAngle - imax / 2 * burstSpacing + (i + 0.5) * burstSpacing;
       normal = Vector.fromDegrees(angle);
-      origin = Vector.added(this.pos, Vector.scale(normal, this.size[0] / 2 + Spinny.prototype.size[0] / 2));
+      origin = this.pos; // Vector.added(this.pos, Vector.scale(normal, this.size[0] / 2 + Spinny.prototype.size[0] / 2))
       new Spinny(players, normal).spawn(origin);
     }
   },
   reload: function() {
     var distance = Vector.subtracted(player.pos, this.pos);
-    this.shotDirection = Vector.normalized(distance);
+    this.shotDirection = Vector.LEFT; // Vector.normalized(distance)
   },
   update: function() {
     if (!this.dying) {
@@ -1327,6 +1333,10 @@ Player.prototype = extend(Ship, {
   }
 });
 
+function spawnEnemy(pos) {
+  new Enemy().spawn(pos).pushTrigger();
+}
+
 function main() {
   background = Display.create('background');
   foreground = Display.create('foreground');
@@ -1350,10 +1360,9 @@ function main() {
     a: 'MouseLeft',
   }).spawn(Vector.multiplied(Display.size, [.25, .5]));
 
-  var enemyPos = Vector.multiplied(Display.size, [.75, .25]);
-  var enemy    = new Enemy().spawn(enemyPos);
-
-  enemy.pushTrigger();
+  var waveInterval = 1.5 * 60;
+  var waveTimer = 0;
+  var wavePos = 1;
 
   var shots = [];
 
@@ -1379,6 +1388,12 @@ function main() {
       background.update();
       foreground.update();
 
+      if (!waveTimer--) {
+        waveTimer = waveInterval;
+        wavePos *= -1;
+        spawnEnemy(Vector.added(Vector.multiplied(Display.size, [1, .5]), [Enemy.prototype.size[0] / 2, Display.size[1] / 4 * wavePos]));
+      }
+
     }
     if (Input.tapped.KeyP) {
       paused = !paused;
@@ -1387,4 +1402,4 @@ function main() {
 }
 
 Display.init(app);
-Display.load(['ship', 'spear', 'boost', 'mountains', 'crag', 'enemy', 'explosion', 'spinny', 'spark', 'missile', 'missile-boost', 'smoke', 'clouds', 'sun'], main);
+Display.load(['ship', 'spear', 'boost', 'mountains', 'crag', 'eye', 'explosion', 'spinny', 'spark', 'missile', 'missile-boost', 'smoke', 'clouds', 'sun'], main);

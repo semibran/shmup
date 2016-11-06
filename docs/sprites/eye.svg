@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <g id="eye">
+    <g id="body">
+      <circle fill="#424" cx="16" cy="16" r="16"/>
+      <circle fill="#646" cx="17" cy="15" r="14"/>
+      <circle fill="#868" cx="21" cy="11" r="7"/>
+    </g>
+    <svg id="white" fill="white" x="4" y="8" width="24" height="16" viewBox="0 0 24 16">
+      <path d="M0 8 C 8 4, 16 4, 24 8"/>
+      <path d="M0 8 C 8 16, 16 16, 24 8"/>
+    </svg>
+    <svg id="pupil" x="12" y="12" width="8" height="8" viewBox="0 0 8 8">
+      <circle fill="#646" cx="4" cy="4" r="4"/>
+      <circle fill="black" cx="4" cy="4" r="3"/>
+      <circle fill="white" cx="5" cy="3" r="1"/>
+    </svg>
+  </g>
+</svg>
